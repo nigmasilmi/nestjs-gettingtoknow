@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  NotFoundException,
+  Patch,
+  Delete,
+} from '@nestjs/common';
 import { Product } from './product.model';
 import { ProductsService } from './products.service';
 
@@ -23,5 +32,31 @@ export class ProductsController {
       prodPrice,
     );
     return { id: generatedPId };
+  }
+
+  @Get(':id')
+  getProduct(@Param('id') paramId: string) {
+    return this.productsService.getOneProduct(paramId);
+  }
+
+  @Patch(':id')
+  editProduct(
+    @Param('id') paramId: string,
+    @Body('name') prodName: string,
+    @Body('description') prodDescript: string,
+    @Body('price') prodPrice: number,
+  ) {
+    return this.productsService.editProduct(
+      paramId,
+      prodName,
+      prodDescript,
+      prodPrice,
+    );
+  }
+
+  @Delete(':id')
+  deleteProduct(@Param('id') prodId: string) {
+    this.productsService.deleteProduct(prodId);
+    return null;
   }
 }
