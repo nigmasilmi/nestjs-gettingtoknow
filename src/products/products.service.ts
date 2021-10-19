@@ -1,56 +1,84 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Product } from './product.model';
+// import { Product } from './product.model';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Product } from './product.interface';
 
 @Injectable()
 export class ProductsService {
+  // dado que Model es un tipo genérico, se debe especificar la forma del modelo
+  // con el uso de una interfaz
+  constructor(
+    @InjectModel('Product') private readonly productModel: Model<Product>,
+  ) {}
   private products: Product[] = [];
 
-  private findProduct(paramId: string): [Product, number] {
-    const targetIndex = this.products.findIndex((p) => p.id === paramId);
-    const targetProduct = this.products[targetIndex];
-
-    if (!targetProduct) {
+  private async findProduct(paramId: string): Promise<Product> {
+    let product;
+    // en caso de que un id no sea de la forma mongoDB id, se genera un error 500
+    // para salvar ese error, incluímos el código de interés en un try catch
+    try {
+      product = await this.productModel.findById(paramId);
+    } catch {
+      throw new NotFoundException('Error en el código del producto');
+    }
+    if (!product) {
       throw new NotFoundException('Producto no encontrado');
     }
-    return [targetProduct, targetIndex];
+    return product;
   }
 
-  addProduct(title: string, desc: string, price: number) {
-    const randomId = String(Math.random());
-    const newProduct = new Product(randomId, title, desc, price);
-    this.products.push(newProduct);
-    return randomId;
+  async addProduct(title: string, desc: string, price: number) {
+    const newProduct = new this.productModel({
+      name: title,
+      description: desc,
+      price,
+    });
+    const newP = await newProduct.save();
+    return newP.id as string;
   }
 
-  getProducts(): Product[] {
-    // dado que estamos resguardando products (private), retornar el mismo objeto reference type
-    // implicaría un acceso directo a esta entidad, por lo que para mantener su integridad, retornamos una copia de esta
-    return [...this.products];
+  async getProducts() {
+    // dado que las queries en mongoose retornan un thenable, para retornar una promesa real se ejecuta el método exec()
+    const products = await this.productModel.find().exec();
+    // recordar que .id es un getter, no hace referencia a la propiedad como tal, sino es un getter de la propiedad _id
+    return products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      price: p.price,
+    }));
   }
 
-  getOneProduct(paramId: string): Product {
-    return this.findProduct(paramId)[0];
+  async getOneProduct(paramId: string): Promise<any> {
+    const product = await this.findProduct(paramId);
+    return product;
   }
 
-  editProduct(id: string, title: string, desc: string, price: number): Product {
-    const [targetProduct, targetIndex] = this.findProduct(id);
-    let temporalP = { ...targetProduct };
+  async editProduct(
+    id: string,
+    title: string,
+    desc: string,
+    price: number,
+  ): Promise<Product> {
+    const product = await this.findProduct(id);
     if (title) {
-      temporalP.name = title;
+      product.name = title;
     }
     if (desc) {
-      temporalP.description = desc;
+      product.description = desc;
     }
     if (price) {
-      temporalP.price = price;
+      product.price = price;
     }
-    this.products[targetIndex] = temporalP;
-    return temporalP;
+    product.save();
+    return product;
   }
 
-  deleteProduct(id: string) {
-    const [targetProduct, targetIndex] = this.findProduct(id);
-    this.products.splice(targetIndex, 1);
-    return targetProduct.id;
+  async deleteProduct(id: string) {
+    const isItGone = await this.productModel.deleteOne({ _id: id });
+    if (isItGone.deletedCount === 0) {
+      throw new NotFoundException('No se ha podido eliminar el producto');
+    }
   }
 }

@@ -4,7 +4,6 @@ import {
   Post,
   Body,
   Param,
-  NotFoundException,
   Patch,
   Delete,
 } from '@nestjs/common';
@@ -15,22 +14,24 @@ import { ProductsService } from './products.service';
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
   @Get()
-  getAllProducts(): Product[] {
-    return this.productsService.getProducts();
+  async getAllProducts(): Promise<Product[]> {
+    const products = await this.productsService.getProducts();
+    return products;
   }
   // @Body parsea el body del request y busca las propiedades cuyo nombre especificamos como parámetros
   // asignándolos a las variables correspondientes
   @Post()
-  createProduct(
+  async createProduct(
     @Body('name') prodName: string,
     @Body('description') prodDescript: string,
     @Body('price') prodPrice: number,
-  ): any {
-    const generatedPId = this.productsService.addProduct(
+  ): Promise<any> {
+    const generatedPId = await this.productsService.addProduct(
       prodName,
       prodDescript,
       prodPrice,
     );
+
     return { id: generatedPId };
   }
 
@@ -40,13 +41,13 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  editProduct(
+  async editProduct(
     @Param('id') paramId: string,
     @Body('name') prodName: string,
     @Body('description') prodDescript: string,
     @Body('price') prodPrice: number,
   ) {
-    return this.productsService.editProduct(
+    return await this.productsService.editProduct(
       paramId,
       prodName,
       prodDescript,
@@ -55,8 +56,7 @@ export class ProductsController {
   }
 
   @Delete(':id')
-  deleteProduct(@Param('id') prodId: string) {
-    this.productsService.deleteProduct(prodId);
-    return null;
+  async deleteProduct(@Param('id') prodId: string) {
+    await this.productsService.deleteProduct(prodId);
   }
 }
