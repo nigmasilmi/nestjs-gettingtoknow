@@ -11,7 +11,6 @@ export class ProductsService {
   constructor(
     @InjectModel('Product') private readonly productModel: Model<Product>,
   ) {}
-  private products: Product[] = [];
 
   private async findProduct(paramId: string): Promise<Product> {
     let product;
@@ -42,12 +41,7 @@ export class ProductsService {
     // dado que las queries en mongoose retornan un thenable, para retornar una promesa real se ejecuta el método exec()
     const products = await this.productModel.find().exec();
     // recordar que .id es un getter, no hace referencia a la propiedad como tal, sino es un getter de la propiedad _id
-    return products.map((p) => ({
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      price: p.price,
-    }));
+    return products;
   }
 
   async getOneProduct(paramId: string): Promise<any> {
@@ -76,7 +70,7 @@ export class ProductsService {
   }
 
   async deleteProduct(id: string) {
-    const isItGone = await this.productModel.deleteOne({ _id: id });
+    const isItGone = await this.productModel.deleteOne({ _id: id }).exec();
     if (isItGone.deletedCount === 0) {
       throw new NotFoundException('No se ha podido eliminar el producto');
     }

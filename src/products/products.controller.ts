@@ -7,7 +7,7 @@ import {
   Patch,
   Delete,
 } from '@nestjs/common';
-import { Product } from './product.model';
+import { Product } from './product.interface';
 import { ProductsService } from './products.service';
 
 @Controller('products')
@@ -58,5 +58,6 @@ export class ProductsController {
   @Delete(':id')
   async deleteProduct(@Param('id') prodId: string) {
     await this.productsService.deleteProduct(prodId);
+    return null;
   }
 }
